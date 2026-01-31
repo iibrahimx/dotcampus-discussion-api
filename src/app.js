@@ -1,16 +1,14 @@
 const express = require("express");
 const notFound = require("./middlewares/notFound");
 const errorHandler = require("./middlewares/errorHandler");
+const healthRoutes = require("./routes/health.routes");
 
 const app = express();
 
 // Use middleware to read JSON bodies
 app.use(express.json());
 
-// Register a route handler
-app.get("/health", (req, res) => {
-  res.status(200).json({ status: "ok" });
-});
+app.use("/api/v1", healthRoutes);
 
 // 404 error handler
 app.use(notFound);
