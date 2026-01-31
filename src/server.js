@@ -1,10 +1,10 @@
 require("dotenv").config();
 
 const app = require("./app");
-
-const PORT = process.env.PORT || 4000;
+const env = require("./config/env");
 
 // Start the server process
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+app.listen(env.port, () => {
+  console.log(`Server running on http://localhost:${env.port}`);
+  console.log(`Enviroment: ${env.nodeEnv}`);
 });
