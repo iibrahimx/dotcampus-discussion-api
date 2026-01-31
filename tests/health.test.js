@@ -25,12 +25,62 @@ describe("API basics", () => {
     expect(response.body).toHaveProperty("message");
     expect(response.body.message).toBe("Intentional test error");
   });
+});
 
-  it("should return 501 and json for register placeholder", async () => {
-    const response = await request(app).post("/api/v1/auth/register");
+describe("POST /auth/register", () => {
+  it("should register a new user successfully", async () => {
+    const unique = Date.now();
 
-    expect(response.statusCode).toBe(501);
-    expect(response.body).toHaveProperty("message");
-    expect(response.body.message).toBe("Not implemented yet");
+    const response = await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        email: `test${unique}@example.com`,
+        username: `testuser${unique}`,
+        password: "password123",
+      });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.body).toHaveProperty("id");
+    expect(response.body.email).toBe(`test${unique}@example.com`);
+    expect(response.body).not.toHaveProperty("password");
   });
+
+  // Test for duplicates
+  it("should not allow duplicate email", async () => {
+    const unique = Date.now();
+    const email = `dup${unique}@example.com`;
+
+    await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        email,
+        username: `first${unique}`,
+        password: "password123",
+      });
+
+    const response = await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        email,
+        username: `second${unique}`,
+        password: "password123",
+      });
+
+    expect(response.statusCode).toBe(409);
+  });
+
+  it("should return 400 for invalid data", async () => {
+    const response = await request(app).post("/api/v1/auth/register").send({
+      email: "invalid-email",
+      username: "ab",
+      password: "123",
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+});
+
+afterAll(async () => {
+  const { disconnectPrisma } = require("../src/config/prisma");
+  await disconnectPrisma();
 });
