@@ -25,4 +25,12 @@ describe("API basics", () => {
     expect(response.body).toHaveProperty("message");
     expect(response.body.message).toBe("Intentional test error");
   });
+
+  it("should return 501 and json for register placeholder", async () => {
+    const response = await request(app).post("/api/v1/auth/register");
+
+    expect(response.statusCode).toBe(501);
+    expect(response.body).toHaveProperty("message");
+    expect(response.body.message).toBe("Not implemented yet");
+  });
 });
