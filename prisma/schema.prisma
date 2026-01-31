@@ -13,9 +13,50 @@ datasource db {
   provider = "postgresql"
 }
 
-model Ping {
-  id        Int      @id @default(autoincrement())
-  message   String
-  createdAt DateTime @default(now())
+enum Role {
+  LEARNER
+  MENTOR
+  ADMIN
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  username  String   @unique
+  password  String
+  role      Role     @default(LEARNER)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  discussions Discussion[]
+  comments    Comment[]
+}
+
+model Discussion {
+  id        String   @id @default(cuid())
+  title     String
+  content   String
+
+  authorId  String
+  author    User     @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  comments  Comment[]
+}
+
+model Comment {
+  id           String     @id @default(cuid())
+  content      String
+
+  authorId     String
+  author       User       @relation(fields: [authorId], references: [id], onDelete: Cascade)
+
+  discussionId String
+  discussion   Discussion @relation(fields: [discussionId], references: [id], onDelete: Cascade)
+
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
