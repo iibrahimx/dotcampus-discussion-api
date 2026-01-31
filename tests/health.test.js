@@ -80,6 +80,62 @@ describe("POST /auth/register", () => {
   });
 });
 
+describe("POST /auth/login", () => {
+  it("should login and return a token", async () => {
+    const unique = Date.now();
+    const email = `login${unique}@example.com`;
+    const username = `loginuser${unique}`;
+    const password = "password123";
+
+    // register first
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    // login
+    const response = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toHaveProperty("token");
+    expect(typeof response.body.token).toBe("string");
+    expect(response.body).toHaveProperty("user");
+    expect(response.body.user.email).toBe(email);
+  });
+
+  it("should return 401 for wrong password", async () => {
+    const unique = Date.now();
+    const email = `wrongpass${unique}@example.com`;
+    const username = `wrongpassuser${unique}`;
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password: "password123",
+    });
+
+    const response = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password: "password124",
+    });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("should return 400 for invalid login body", async () => {
+    const response = await request(app).post("/api/v1/auth/login").send({
+      email: "not-an-email",
+      password: "123",
+    });
+
+    expect(response.statusCode).toBe(400);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();

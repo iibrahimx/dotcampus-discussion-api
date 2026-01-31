@@ -6,4 +6,9 @@ const registerSchema = z.object({
   password: z.string().min(8).max(72), // max 72 because bcrypt effectively only uses first 72 bytes
 });
 
-module.exports = { registerSchema };
+const loginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(8).max(72),
+});
+
+module.exports = { registerSchema, loginSchema };
