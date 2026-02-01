@@ -910,6 +910,91 @@ describe("PATCH /users/:id/role (admin)", () => {
   });
 });
 
+describe("Mentor permissions", () => {
+  it("mentor should update someone else's discussion", async () => {
+    const unique = Date.now();
+    const password = "password123";
+
+    // Admin login
+    const adminEmail = "admin@example.com";
+    const regAdmin = await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        email: adminEmail,
+        username: `adminMentorTest${unique}`,
+        password,
+      });
+    expect([201, 409]).toContain(regAdmin.statusCode);
+
+    const loginAdmin = await request(app).post("/api/v1/auth/login").send({
+      email: adminEmail,
+      password,
+    });
+    const adminToken = loginAdmin.body.token;
+
+    // User A (learner) creates discussion
+    const emailA = `author${unique}@example.com`;
+    const usernameA = `author${unique}`;
+
+    await request(app).post("/api/v1/auth/register").send({
+      email: emailA,
+      username: usernameA,
+      password,
+    });
+
+    const loginA = await request(app).post("/api/v1/auth/login").send({
+      email: emailA,
+      password,
+    });
+
+    const tokenA = loginA.body.token;
+
+    const created = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${tokenA}`)
+      .send({ title: "Original title", content: "Original content" });
+
+    const discussionId = created.body.id;
+
+    // User B becomes mentor
+    const emailB = `mentor${unique}@example.com`;
+    const usernameB = `mentor${unique}`;
+
+    const regB = await request(app).post("/api/v1/auth/register").send({
+      email: emailB,
+      username: usernameB,
+      password,
+    });
+
+    const userBId = regB.body.id;
+
+    // Admin promotes B to MENTOR
+    const promoted = await request(app)
+      .patch(`/api/v1/users/${userBId}/role`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ role: "MENTOR" });
+
+    expect(promoted.statusCode).toBe(200);
+    expect(promoted.body.role).toBe("MENTOR");
+
+    // Mentor logs in and updates A's discussion
+    const loginB = await request(app).post("/api/v1/auth/login").send({
+      email: emailB,
+      password,
+    });
+
+    const mentorToken = loginB.body.token;
+
+    const updated = await request(app)
+      .patch(`/api/v1/discussions/${discussionId}`)
+      .set("Authorization", `Bearer ${mentorToken}`)
+      .send({ title: "Mentor edited title" });
+
+    expect(updated.statusCode).toBe(200);
+    expect(updated.body.title).toBe("Mentor edited title");
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
