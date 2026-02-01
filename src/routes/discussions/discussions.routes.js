@@ -69,4 +69,57 @@ router.get("/discussions", requireAuth, async (req, res, next) => {
   }
 });
 
+router.get("/discussions/:id", requireAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const discussion = await prisma.discussion.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        authorId: true,
+        createdAt: true,
+        updatedAt: true,
+        author: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+          },
+        },
+        comments: {
+          orderBy: { createdAt: "asc" },
+          select: {
+            id: true,
+            content: true,
+            authorId: true,
+            createdAt: true,
+            updatedAt: true,
+            author: {
+              select: {
+                id: true,
+                username: true,
+                role: true,
+              },
+            },
+          },
+        },
+      },
+    });
+
+    if (!discussion) {
+      return res.status(404).json({
+        error: "Not Found",
+        message: "Discussion not found",
+      });
+    }
+
+    return res.status(200).json(discussion);
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

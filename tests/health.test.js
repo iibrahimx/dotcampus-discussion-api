@@ -279,6 +279,81 @@ describe("POST /discussions", () => {
   });
 });
 
+describe("GET /discussions/:id", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app).get("/api/v1/discussions/some-id");
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("should return 404 if discussion does not exist", async () => {
+    const unique = Date.now();
+    const email = `single${unique}@example.com`;
+    const username = `singleuser${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const response = await request(app)
+      .get("/api/v1/discussions/nonexistent-id")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  it("should return discussion with comments array", async () => {
+    const unique = Date.now();
+    const email = `singleok${unique}@example.com`;
+    const username = `singleokuser${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    // create discussion
+    const created = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({
+        title: `My Discussion ${unique}`,
+        content: "Some content",
+      });
+
+    const discussionId = created.body.id;
+
+    // fetch it
+    const response = await request(app)
+      .get(`/api/v1/discussions/${discussionId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body).toHaveProperty("id");
+    expect(response.body.id).toBe(discussionId);
+    expect(response.body).toHaveProperty("comments");
+    expect(Array.isArray(response.body.comments)).toBe(true);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
