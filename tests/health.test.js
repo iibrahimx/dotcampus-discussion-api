@@ -177,7 +177,7 @@ describe("GET /discussions", () => {
     expect(response.statusCode).toBe(401);
   });
 
-  it("should return 501 with valid token (placeholder)", async () => {
+  it("should return 200 and an array with valid token", async () => {
     const unique = Date.now();
     const email = `disc${unique}@example.com`;
     const username = `discuser${unique}`;
@@ -200,8 +200,8 @@ describe("GET /discussions", () => {
       .get("/api/v1/discussions")
       .set("Authorization", `Bearer ${token}`);
 
-    expect(response.statusCode).toBe(501);
-    expect(response.body).toHaveProperty("message");
+    expect(response.statusCode).toBe(200);
+    expect(Array.isArray(response.body)).toBe(true);
   });
 });
 

@@ -42,8 +42,31 @@ router.post("/discussions", requireAuth, async (req, res, next) => {
   }
 });
 
-router.get("/discussions", requireAuth, (req, res) => {
-  res.status(501).json({ message: "Not implemented yet" });
+router.get("/discussions", requireAuth, async (req, res, next) => {
+  try {
+    const discussions = await prisma.discussion.findMany({
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        title: true,
+        content: true,
+        authorId: true,
+        createdAt: true,
+        updatedAt: true,
+        author: {
+          select: {
+            id: true,
+            username: true,
+            role: true,
+          },
+        },
+      },
+    });
+
+    return res.status(200).json(discussions);
+  } catch (error) {
+    next(error);
+  }
 });
 
 module.exports = router;
