@@ -354,6 +354,104 @@ describe("GET /discussions/:id", () => {
   });
 });
 
+describe("PATCH /discussions/:id", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app)
+      .patch("/api/v1/discussions/some-id")
+      .send({ title: "New title" });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("learner should update own discussion", async () => {
+    const unique = Date.now();
+    const email = `ownupd${unique}@example.com`;
+    const username = `ownupduser${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const created = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "Original", content: "Original content" });
+
+    const discussionId = created.body.id;
+
+    const updated = await request(app)
+      .patch(`/api/v1/discussions/${discussionId}`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "Updated title" });
+
+    expect(updated.statusCode).toBe(200);
+    expect(updated.body.title).toBe("Updated title");
+  });
+
+  it("learner should not update someone else's discussion (403)", async () => {
+    const unique = Date.now();
+
+    // User A creates discussion
+    const emailA = `usera${unique}@example.com`;
+    const usernameA = `usera${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email: emailA,
+      username: usernameA,
+      password,
+    });
+
+    const loginA = await request(app).post("/api/v1/auth/login").send({
+      email: emailA,
+      password,
+    });
+
+    const tokenA = loginA.body.token;
+
+    const created = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${tokenA}`)
+      .send({ title: "A post", content: "A content" });
+
+    const discussionId = created.body.id;
+
+    // User B tries to update
+    const emailB = `userb${unique}@example.com`;
+    const usernameB = `userb${unique}`;
+
+    await request(app).post("/api/v1/auth/register").send({
+      email: emailB,
+      username: usernameB,
+      password,
+    });
+
+    const loginB = await request(app).post("/api/v1/auth/login").send({
+      email: emailB,
+      password,
+    });
+
+    const tokenB = loginB.body.token;
+
+    const updated = await request(app)
+      .patch(`/api/v1/discussions/${discussionId}`)
+      .set("Authorization", `Bearer ${tokenB}`)
+      .send({ title: "Hacked title" });
+
+    expect(updated.statusCode).toBe(403);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
