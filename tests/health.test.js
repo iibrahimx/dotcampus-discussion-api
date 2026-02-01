@@ -768,6 +768,63 @@ describe("DELETE /comments/:id (admin)", () => {
   });
 });
 
+describe("Admin deletes any discussion", () => {
+  it("admin should delete someone else's discussion", async () => {
+    const unique = Date.now();
+    const password = "password123";
+
+    // Ensure admin exists and login admin
+    const adminEmail = "admin@example.com"; // matches ADMIN_BOOTSTRAP_EMAIL
+    const adminUsername = `adminDel${unique}`;
+
+    const regAdmin = await request(app).post("/api/v1/auth/register").send({
+      email: adminEmail,
+      username: adminUsername,
+      password,
+    });
+
+    expect([201, 409]).toContain(regAdmin.statusCode);
+
+    const loginAdmin = await request(app).post("/api/v1/auth/login").send({
+      email: adminEmail,
+      password,
+    });
+
+    const adminToken = loginAdmin.body.token;
+
+    // Create a learner + discussion
+    const learnerEmail = `victim${unique}@example.com`;
+    const learnerUsername = `victim${unique}`;
+
+    await request(app).post("/api/v1/auth/register").send({
+      email: learnerEmail,
+      username: learnerUsername,
+      password,
+    });
+
+    const loginLearner = await request(app).post("/api/v1/auth/login").send({
+      email: learnerEmail,
+      password,
+    });
+
+    const learnerToken = loginLearner.body.token;
+
+    const created = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${learnerToken}`)
+      .send({ title: "Admin will delete", content: "To be removed" });
+
+    const discussionId = created.body.id;
+
+    // Admin deletes learner's discussion
+    const deleted = await request(app)
+      .delete(`/api/v1/discussions/${discussionId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(deleted.statusCode).toBe(204);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
