@@ -674,6 +674,100 @@ describe("Admin bootstrap", () => {
   });
 });
 
+describe("DELETE /comments/:id (admin)", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app).delete("/api/v1/comments/some-id");
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("should return 403 for non-admin user", async () => {
+    const unique = Date.now();
+    const email = `notadmin${unique}@example.com`;
+    const username = `notadmin${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const response = await request(app)
+      .delete("/api/v1/comments/some-id")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("admin should delete a comment", async () => {
+    const unique = Date.now();
+    const adminEmail = "admin@example.com"; // must match ADMIN_BOOTSTRAP_EMAIL in .env
+    const adminUsername = `admin${unique}`;
+    const password = "password123";
+
+    // Register admin (if already exists, ignore 409)
+    const reg = await request(app).post("/api/v1/auth/register").send({
+      email: adminEmail,
+      username: adminUsername,
+      password,
+    });
+
+    expect([201, 409]).toContain(reg.statusCode);
+
+    const loginAdmin = await request(app).post("/api/v1/auth/login").send({
+      email: adminEmail,
+      password,
+    });
+
+    const adminToken = loginAdmin.body.token;
+
+    // Create a learner + discussion + comment
+    const learnerEmail = `learner${unique}@example.com`;
+    const learnerUsername = `learner${unique}`;
+
+    await request(app).post("/api/v1/auth/register").send({
+      email: learnerEmail,
+      username: learnerUsername,
+      password,
+    });
+
+    const learnerLogin = await request(app).post("/api/v1/auth/login").send({
+      email: learnerEmail,
+      password,
+    });
+
+    const learnerToken = learnerLogin.body.token;
+
+    const createdDiscussion = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${learnerToken}`)
+      .send({ title: "Admin delete comment", content: "Post content" });
+
+    const discussionId = createdDiscussion.body.id;
+
+    const createdComment = await request(app)
+      .post(`/api/v1/discussions/${discussionId}/comments`)
+      .set("Authorization", `Bearer ${learnerToken}`)
+      .send({ content: "This will be deleted" });
+
+    const commentId = createdComment.body.id;
+
+    // Admin deletes comment
+    const deleted = await request(app)
+      .delete(`/api/v1/comments/${commentId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(deleted.statusCode).toBe(204);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
