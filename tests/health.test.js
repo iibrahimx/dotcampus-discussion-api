@@ -825,6 +825,91 @@ describe("Admin deletes any discussion", () => {
   });
 });
 
+describe("PATCH /users/:id/role (admin)", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app)
+      .patch("/api/v1/users/some-id/role")
+      .send({ role: "MENTOR" });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("should return 403 for non-admin", async () => {
+    const unique = Date.now();
+    const password = "password123";
+
+    const email = `roleuser${unique}@example.com`;
+    const username = `roleuser${unique}`;
+
+    const reg = await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const userId = reg.body.id;
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const response = await request(app)
+      .patch(`/api/v1/users/${userId}/role`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ role: "MENTOR" });
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("admin should change a user role to MENTOR", async () => {
+    const unique = Date.now();
+    const password = "password123";
+
+    // Admin login (bootstrap admin)
+    const adminEmail = "admin@example.com";
+    const adminUsername = `adminRole${unique}`;
+
+    const regAdmin = await request(app).post("/api/v1/auth/register").send({
+      email: adminEmail,
+      username: adminUsername,
+      password,
+    });
+
+    expect([201, 409]).toContain(regAdmin.statusCode);
+
+    const loginAdmin = await request(app).post("/api/v1/auth/login").send({
+      email: adminEmail,
+      password,
+    });
+
+    const adminToken = loginAdmin.body.token;
+
+    // Create learner
+    const email = `learnerrole${unique}@example.com`;
+    const username = `learnerrole${unique}`;
+
+    const reg = await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const userId = reg.body.id;
+
+    // Admin changes role
+    const response = await request(app)
+      .patch(`/api/v1/users/${userId}/role`)
+      .set("Authorization", `Bearer ${adminToken}`)
+      .send({ role: "MENTOR" });
+
+    expect(response.statusCode).toBe(200);
+    expect(response.body.role).toBe("MENTOR");
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
