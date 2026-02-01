@@ -1072,6 +1072,13 @@ describe("DELETE /users/:id (admin)", () => {
   });
 });
 
+describe("Rate limiting", () => {
+  it("should allow a normal request under rate limit", async () => {
+    const response = await request(app).get("/api/v1/health");
+    expect(response.statusCode).toBe(200);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
