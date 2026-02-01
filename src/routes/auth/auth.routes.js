@@ -63,6 +63,7 @@ router.post("/auth/register", async (req, res, next) => {
 
 router.post("/auth/login", async (req, res, next) => {
   try {
+    // Validate input with zod
     const parsed = loginSchema.safeParse(req.body);
 
     if (!parsed.success) {
@@ -74,6 +75,7 @@ router.post("/auth/login", async (req, res, next) => {
 
     const { email, password } = parsed.data;
 
+    // Find user by email
     const user = await prisma.user.findUnique({
       where: { email },
     });
@@ -85,6 +87,7 @@ router.post("/auth/login", async (req, res, next) => {
       });
     }
 
+    // Compare password using bcrypt
     const passwordMatch = await bcrypt.compare(password, user.password);
 
     if (!passwordMatch) {
@@ -94,12 +97,14 @@ router.post("/auth/login", async (req, res, next) => {
       });
     }
 
+    // Create token using jwt
     const token = jwt.sign(
       { sub: user.id, role: user.role },
       process.env.JWT_SECRET,
       { expiresIn: process.env.JWT_EXPIRES_IN || "1d" },
     );
 
+    // Return token and safe user object
     return res.status(200).json({
       token,
       user: {
