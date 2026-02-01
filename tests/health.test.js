@@ -545,6 +545,114 @@ describe("DELETE /discussions/:id", () => {
   });
 });
 
+describe("POST /discussions/:id/comments", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app)
+      .post("/api/v1/discussions/some-id/comments")
+      .send({ content: "Hi" });
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("should return 404 if discussion does not exist", async () => {
+    const unique = Date.now();
+    const email = `c404${unique}@example.com`;
+    const username = `c404user${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const response = await request(app)
+      .post("/api/v1/discussions/nonexistent/comments")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ content: "Hello" });
+
+    expect(response.statusCode).toBe(404);
+  });
+
+  it("should create a comment on a discussion", async () => {
+    const unique = Date.now();
+    const email = `cok${unique}@example.com`;
+    const username = `cokuser${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const createdDiscussion = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "Commentable", content: "Post content" });
+
+    const discussionId = createdDiscussion.body.id;
+
+    const response = await request(app)
+      .post(`/api/v1/discussions/${discussionId}/comments`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ content: "First comment" });
+
+    expect(response.statusCode).toBe(201);
+    expect(response.body).toHaveProperty("id");
+    expect(response.body.content).toBe("First comment");
+    expect(response.body.discussionId).toBe(discussionId);
+  });
+
+  it("should return 400 for invalid comment body", async () => {
+    const unique = Date.now();
+    const email = `cbad${unique}@example.com`;
+    const username = `cbaduser${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const createdDiscussion = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "Bad comment", content: "Post content" });
+
+    const discussionId = createdDiscussion.body.id;
+
+    const response = await request(app)
+      .post(`/api/v1/discussions/${discussionId}/comments`)
+      .set("Authorization", `Bearer ${token}`)
+      .send({ content: "" });
+
+    expect(response.statusCode).toBe(400);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();

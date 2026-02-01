@@ -5,6 +5,7 @@ const {
   createDiscussionSchema,
   updateDiscussionSchema,
 } = require("../../validators/discussion.validators");
+const { createCommentSchema } = require("../../validators/comment.validators");
 
 const router = express.Router();
 
@@ -122,6 +123,57 @@ router.get("/discussions/:id", requireAuth, async (req, res, next) => {
     next(error);
   }
 });
+
+router.post(
+  "/discussions/:id/comments",
+  requireAuth,
+  async (req, res, next) => {
+    try {
+      const { id: discussionId } = req.params;
+
+      const parsed = createCommentSchema.safeParse(req.body);
+      if (!parsed.success) {
+        return res.status(400).json({
+          error: "ValidationError",
+          message: parsed.error.issues.map((i) => i.message),
+        });
+      }
+
+      // Ensure discussion exists
+      const discussion = await prisma.discussion.findUnique({
+        where: { id: discussionId },
+        select: { id: true },
+      });
+
+      if (!discussion) {
+        return res.status(404).json({
+          error: "Not Found",
+          message: "Discussion not found",
+        });
+      }
+
+      const comment = await prisma.comment.create({
+        data: {
+          content: parsed.data.content,
+          discussionId,
+          authorId: req.user.id,
+        },
+        select: {
+          id: true,
+          content: true,
+          discussionId: true,
+          authorId: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return res.status(201).json(comment);
+    } catch (error) {
+      next(error);
+    }
+  },
+);
 
 router.patch("/discussions/:id", requireAuth, async (req, res, next) => {
   try {
