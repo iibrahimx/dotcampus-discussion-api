@@ -653,6 +653,27 @@ describe("POST /discussions/:id/comments", () => {
   });
 });
 
+describe("Admin bootstrap", () => {
+  it("should assign ADMIN role when registering bootstrap email", async () => {
+    const unique = Date.now();
+    const email = "admin@example.com"; // must match .env
+    const username = `adminuser${unique}`;
+
+    const response = await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password: "password123",
+    });
+
+    expect([201, 409]).toContain(response.statusCode);
+
+    // If it was newly created
+    if (response.statusCode === 201) {
+      expect(response.body.role).toBe("ADMIN");
+    }
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();

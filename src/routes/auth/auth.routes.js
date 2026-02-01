@@ -40,12 +40,27 @@ router.post("/auth/register", async (req, res, next) => {
     // Hash passowrd
     const hashedPassword = await bcrypt.hash(password, 10);
 
+    const role =
+      process.env.ADMIN_BOOTSTRAP_EMAIL &&
+      email.toLowerCase() === process.env.ADMIN_BOOTSTRAP_EMAIL.toLowerCase()
+        ? "ADMIN"
+        : "LEARNER";
+
     // Create user
     const user = await prisma.user.create({
       data: {
         email,
         username,
         password: hashedPassword,
+        role,
+      },
+      select: {
+        id: true,
+        email: true,
+        username: true,
+        role: true,
+        createdAt: true,
+        updatedAt: true,
       },
     });
 
