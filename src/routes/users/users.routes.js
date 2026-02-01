@@ -53,4 +53,32 @@ router.patch(
   },
 );
 
+router.delete(
+  "/users/:id",
+  requireAuth,
+  requireRole("ADMIN"),
+  async (req, res, next) => {
+    try {
+      const { id } = req.params;
+
+      const existing = await prisma.user.findUnique({
+        where: { id },
+        select: { id: true },
+      });
+
+      if (!existing) {
+        return res.status(404).json({
+          error: "Not Found",
+          message: "User not found",
+        });
+      }
+
+      await prisma.user.delete({ where: { id } });
+      return res.status(204).send();
+    } catch (error) {
+      next(error);
+    }
+  },
+);
+
 module.exports = router;

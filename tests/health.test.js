@@ -995,6 +995,83 @@ describe("Mentor permissions", () => {
   });
 });
 
+describe("DELETE /users/:id (admin)", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app).delete("/api/v1/users/some-id");
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("should return 403 for non-admin", async () => {
+    const unique = Date.now();
+    const password = "password123";
+
+    const email = `nonadmindel${unique}@example.com`;
+    const username = `nonadmindel${unique}`;
+
+    const reg = await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const userId = reg.body.id;
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const response = await request(app)
+      .delete(`/api/v1/users/${userId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(403);
+  });
+
+  it("admin should delete a user", async () => {
+    const unique = Date.now();
+    const password = "password123";
+
+    // Admin login
+    const adminEmail = "admin@example.com";
+    const regAdmin = await request(app)
+      .post("/api/v1/auth/register")
+      .send({
+        email: adminEmail,
+        username: `adminUserDel${unique}`,
+        password,
+      });
+    expect([201, 409]).toContain(regAdmin.statusCode);
+
+    const loginAdmin = await request(app).post("/api/v1/auth/login").send({
+      email: adminEmail,
+      password,
+    });
+    const adminToken = loginAdmin.body.token;
+
+    // Create victim user
+    const email = `victimdel${unique}@example.com`;
+    const username = `victimdel${unique}`;
+
+    const regVictim = await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const victimId = regVictim.body.id;
+
+    // Admin deletes victim
+    const deleted = await request(app)
+      .delete(`/api/v1/users/${victimId}`)
+      .set("Authorization", `Bearer ${adminToken}`);
+
+    expect(deleted.statusCode).toBe(204);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
