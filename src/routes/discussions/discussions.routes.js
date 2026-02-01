@@ -177,4 +177,40 @@ router.patch("/discussions/:id", requireAuth, async (req, res, next) => {
   }
 });
 
+router.delete("/discussions/:id", requireAuth, async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.discussion.findUnique({
+      where: { id },
+      select: { id: true, authorId: true },
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        error: "Not Found",
+        message: "Discussion not found",
+      });
+    }
+
+    const isOwner = existing.authorId === req.user.id;
+    const isAdmin = req.user.role === "ADMIN";
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({
+        error: "Forbidden",
+        message: "You are not allowed to delete this discussion",
+      });
+    }
+
+    await prisma.discussion.delete({
+      where: { id },
+    });
+
+    return res.status(204).send();
+  } catch (error) {
+    next(error);
+  }
+});
+
 module.exports = router;

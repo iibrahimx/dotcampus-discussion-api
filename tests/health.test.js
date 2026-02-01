@@ -452,6 +452,99 @@ describe("PATCH /discussions/:id", () => {
   });
 });
 
+describe("DELETE /discussions/:id", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app).delete("/api/v1/discussions/some-id");
+
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("learner should delete own discussion", async () => {
+    const unique = Date.now();
+    const email = `delown${unique}@example.com`;
+    const username = `delown${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const created = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${token}`)
+      .send({ title: "To delete", content: "Delete me" });
+
+    const discussionId = created.body.id;
+
+    const deleted = await request(app)
+      .delete(`/api/v1/discussions/${discussionId}`)
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(deleted.statusCode).toBe(204);
+  });
+
+  it("learner should not delete someone else's discussion (403)", async () => {
+    const unique = Date.now();
+    const password = "password123";
+
+    // User A
+    const emailA = `delA${unique}@example.com`;
+    const usernameA = `delA${unique}`;
+
+    await request(app).post("/api/v1/auth/register").send({
+      email: emailA,
+      username: usernameA,
+      password,
+    });
+
+    const loginA = await request(app).post("/api/v1/auth/login").send({
+      email: emailA,
+      password,
+    });
+
+    const tokenA = loginA.body.token;
+
+    const created = await request(app)
+      .post("/api/v1/discussions")
+      .set("Authorization", `Bearer ${tokenA}`)
+      .send({ title: "A post", content: "A content" });
+
+    const discussionId = created.body.id;
+
+    // User B
+    const emailB = `delB${unique}@example.com`;
+    const usernameB = `delB${unique}`;
+
+    await request(app).post("/api/v1/auth/register").send({
+      email: emailB,
+      username: usernameB,
+      password,
+    });
+
+    const loginB = await request(app).post("/api/v1/auth/login").send({
+      email: emailB,
+      password,
+    });
+
+    const tokenB = loginB.body.token;
+
+    const deleted = await request(app)
+      .delete(`/api/v1/discussions/${discussionId}`)
+      .set("Authorization", `Bearer ${tokenB}`);
+
+    expect(deleted.statusCode).toBe(403);
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
