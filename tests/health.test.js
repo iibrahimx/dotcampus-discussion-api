@@ -171,6 +171,40 @@ describe("GET /protected", () => {
   });
 });
 
+describe("GET /discussions", () => {
+  it("should return 401 without token", async () => {
+    const response = await request(app).get("/api/v1/discussions");
+    expect(response.statusCode).toBe(401);
+  });
+
+  it("should return 501 with valid token (placeholder)", async () => {
+    const unique = Date.now();
+    const email = `disc${unique}@example.com`;
+    const username = `discuser${unique}`;
+    const password = "password123";
+
+    await request(app).post("/api/v1/auth/register").send({
+      email,
+      username,
+      password,
+    });
+
+    const login = await request(app).post("/api/v1/auth/login").send({
+      email,
+      password,
+    });
+
+    const token = login.body.token;
+
+    const response = await request(app)
+      .get("/api/v1/discussions")
+      .set("Authorization", `Bearer ${token}`);
+
+    expect(response.statusCode).toBe(501);
+    expect(response.body).toHaveProperty("message");
+  });
+});
+
 afterAll(async () => {
   const { disconnectPrisma } = require("../src/config/prisma");
   await disconnectPrisma();
