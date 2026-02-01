@@ -9,6 +9,39 @@ const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 
+/**
+ * @openapi
+ * /api/v1/auth/register:
+ *   post:
+ *     summary: Register a new user
+ *     tags:
+ *       - Auth
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, username, password]
+ *             properties:
+ *               email:
+ *                 type: string
+ *                 example: test@example.com
+ *               username:
+ *                 type: string
+ *                 example: testuser
+ *               password:
+ *                 type: string
+ *                 example: password123
+ *     responses:
+ *       201:
+ *         description: User created
+ *       400:
+ *         description: Validation error
+ *       409:
+ *         description: Duplicate email/username
+ */
+
 router.post("/auth/register", async (req, res, next) => {
   try {
     // Vaidate input

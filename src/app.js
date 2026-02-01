@@ -8,6 +8,8 @@ const discussionRoutes = require("./routes/discussions/discussions.routes");
 const commentRoutes = require("./routes/comments/comments.routes");
 const userRoutes = require("./routes/users/users.routes");
 const { apiLimiter, authLimiter } = require("./middlewares/rateLimiters");
+const swaggerUi = require("swagger-ui-express");
+const swaggerSpec = require("./config/swagger");
 
 const app = express();
 
@@ -16,6 +18,8 @@ app.use(express.json());
 
 app.use("/api", apiLimiter);
 app.use("/api/v1/auth", authLimiter);
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use("/api/v1", healthRoutes);
 app.use("/api/v1", authRoutes);
