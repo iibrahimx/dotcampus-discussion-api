@@ -101,4 +101,4 @@ npm run test:coverage
 
 ## Deployment
 
-Live URL:
+Live URL: https://dbdiagram.io/d/697fe6dfbd82f5fce247cdae
