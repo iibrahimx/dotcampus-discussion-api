@@ -40,11 +40,15 @@ Includes authentication, role-based authorization (Learner / Mentor / Admin), di
 
 ## Database Design
 
-DB Diagram: <PASTE_DB_DIAGRAM_LINK_HERE>
+DB Diagram:
+https://dbdiagram.io/d/697fe6dfbd82f5fce247cdae
 
 ## API Documentation (Swagger)
 
-Swagger UI: `http://localhost:4000/api-docs`
+Swagger UI:
+
+- Local: http://localhost:4000/api-docs
+- Production: https://dotcampus-discussion-api.onrender.com/api-docs
 
 ## Setup
 
@@ -90,7 +94,7 @@ Health check:
 Run tests:
 
 ```bash
-npm start
+npm test
 ```
 
 Run coverage:
@@ -101,4 +105,11 @@ npm run test:coverage
 
 ## Deployment
 
-Live URL: https://dbdiagram.io/d/697fe6dfbd82f5fce247cdae
+Live API Base URL:
+https://dotcampus-discussion-api.onrender.com
+
+Health check:
+https://dotcampus-discussion-api.onrender.com/api/v1/health
+
+Swagger Docs:
+https://dotcampus-discussion-api.onrender.com/api-docs
